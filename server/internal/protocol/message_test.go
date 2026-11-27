@@ -1,6 +1,7 @@
 package protocol
 
 import (
+	"encoding/json"
 	"os"
 	"path/filepath"
 	"testing"
@@ -82,6 +83,53 @@ func TestParseOperationAndAcknowledgementMessages(t *testing.T) {
 	}
 	if ack.OperationID != "insert:writer:writer:1" {
 		t.Fatalf("unexpected acknowledgement: %+v", ack)
+	}
+}
+
+func TestMarshalOperationPreservesProtocolShape(t *testing.T) {
+	tests := []struct {
+		name         string
+		input        string
+		expectedKeys []string
+	}{
+		{
+			name:         "insert includes nullable predecessor and value",
+			input:        `{"kind":"insert","id":{"replicaId":"writer","counter":1},"after":null,"value":"x"}`,
+			expectedKeys: []string{"after", "id", "kind", "value"},
+		},
+		{
+			name:         "delete contains only its required fields",
+			input:        `{"kind":"delete","id":{"replicaId":"writer","counter":1}}`,
+			expectedKeys: []string{"id", "kind"},
+		},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			operation, err := ParseOperation([]byte(test.input))
+			if err != nil {
+				t.Fatal(err)
+			}
+			encoded, err := json.Marshal(operation)
+			if err != nil {
+				t.Fatal(err)
+			}
+			var fields map[string]json.RawMessage
+			if err := json.Unmarshal(encoded, &fields); err != nil {
+				t.Fatal(err)
+			}
+			if len(fields) != len(test.expectedKeys) {
+				t.Fatalf("marshaled operation has fields %v, want %v", fields, test.expectedKeys)
+			}
+			for _, name := range test.expectedKeys {
+				if _, exists := fields[name]; !exists {
+					t.Errorf("marshaled operation is missing %q", name)
+				}
+			}
+			if _, err := ParseOperation(encoded); err != nil {
+				t.Fatalf("marshaled operation is not valid protocol input: %v", err)
+			}
+		})
 	}
 }
 

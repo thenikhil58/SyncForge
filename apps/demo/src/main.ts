@@ -7,6 +7,7 @@ import {
   readPlainText,
   TiptapBinding
 } from "@syncforge/tiptap";
+import { getReplicaId } from "./replica-id.mjs";
 import "./style.css";
 
 const editorElement = document.querySelector<HTMLDivElement>("#editor");
@@ -37,9 +38,9 @@ let noticeTimer: number | undefined;
 let editor: Editor | undefined;
 let editorBinding: TiptapBinding | undefined;
 const documentId = getDocumentId();
-const replicaId = getReplicaId();
+const replicaId = getReplicaId(documentId, sessionStorage, (bytes) => crypto.getRandomValues(bytes));
 const doc = createDocument(replicaId);
-const storage = new IndexedDBSyncStorage();
+const storage = new IndexedDBSyncStorage(`syncforge-${replicaId}`);
 const socketProtocol = window.location.protocol === "https:" ? "wss:" : "ws:";
 let client = createSyncClient();
 
@@ -173,11 +174,6 @@ function getDocumentId(): string {
   return "demo-room";
 }
 
-function getReplicaId(): string {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return `tab-${Array.from(bytes, (value) => value.toString(16).padStart(2, "0")).join("")}`;
-}
 
 function createSyncClient(): SyncClient {
   return new SyncClient({
