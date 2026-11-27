@@ -21,6 +21,33 @@ type Operation struct {
 	Value string     `json:"value"`
 }
 
+func (operation Operation) MarshalJSON() ([]byte, error) {
+	switch operation.Kind {
+	case "insert":
+		return json.Marshal(struct {
+			Kind  string     `json:"kind"`
+			ID    ElementID  `json:"id"`
+			After *ElementID `json:"after"`
+			Value string     `json:"value"`
+		}{
+			Kind:  operation.Kind,
+			ID:    operation.ID,
+			After: operation.After,
+			Value: operation.Value,
+		})
+	case "delete":
+		return json.Marshal(struct {
+			Kind string    `json:"kind"`
+			ID   ElementID `json:"id"`
+		}{
+			Kind: operation.Kind,
+			ID:   operation.ID,
+		})
+	default:
+		return nil, fmt.Errorf("unsupported operation kind %q", operation.Kind)
+	}
+}
+
 type Message struct {
 	ProtocolVersion int             `json:"protocolVersion"`
 	Type            string          `json:"type"`

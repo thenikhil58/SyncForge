@@ -329,6 +329,22 @@ func TestDurableWebSocketRestoresHistoryAndEnforcesDocumentAccess(t *testing.T) 
 	if err := writer.ReadJSON(&acknowledgement); err != nil {
 		t.Fatal(err)
 	}
+	if err := writer.WriteJSON(map[string]any{
+		"protocolVersion": 1,
+		"type":            "operation",
+		"documentId":      "durable-doc",
+		"replicaId":       "writer",
+		"operationId":     "delete:writer:writer:1",
+		"operation": map[string]any{
+			"kind": "delete",
+			"id":   map[string]any{"replicaId": "writer", "counter": 1},
+		},
+	}); err != nil {
+		t.Fatal(err)
+	}
+	if err := writer.ReadJSON(&acknowledgement); err != nil {
+		t.Fatal(err)
+	}
 	_ = writer.Close()
 	firstServer.Close()
 
@@ -397,6 +413,13 @@ func TestDurableWebSocketRestoresHistoryAndEnforcesDocumentAccess(t *testing.T) 
 	}
 	if replayed["type"] != "operation" || replayed["operationId"] != "insert:writer:writer:1" {
 		t.Fatalf("durable operation was not restored: %#v", replayed)
+	}
+	var replayedDelete map[string]any
+	if err := authorized.ReadJSON(&replayedDelete); err != nil {
+		t.Fatal(err)
+	}
+	if replayedDelete["type"] != "operation" || replayedDelete["operationId"] != "delete:writer:writer:1" {
+		t.Fatalf("durable delete operation was not restored: %#v", replayedDelete)
 	}
 	var joined map[string]any
 	if err := authorized.ReadJSON(&joined); err != nil {

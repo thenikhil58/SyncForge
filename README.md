@@ -63,6 +63,16 @@ npm run dev:demo
 
 Open <http://localhost:5173/?doc=demo-room>, enter the configured room token, and select **Connect**. Open the same URL in another authorized tab to try collaborative editing.
 
+The token remains in `auth.local.json` across restarts; it does not need to be regenerated each time. To print the token granted for `demo-room`, run this from the repository root:
+
+```sh
+node -p "require('./auth.local.json').principals.find((principal) => principal.documents.includes('demo-room')).token"
+```
+
+The copied invite link identifies the document but does not grant access. Share the room token separately and only with people you authorize. This alpha does not yet include user accounts, sign-in, or user-created room management.
+
+On Windows with WSL2, run the project from the Linux home directory (for example, `~/SyncForge`), not from `/mnt/c/...`. The server relies on Linux file permissions to protect authorization and document data.
+
 ### Docker
 
 ```sh
